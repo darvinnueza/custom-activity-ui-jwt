@@ -1,0 +1,16 @@
+{
+    "headers": [
+        {
+            "source": "/(.*)",
+            "headers": [
+                {
+                "key": "Content-Security-Policy",
+                "value": "frame-ancestors 'self' *.exacttarget.com *.marketingcloudapps.com *.salesforce.com;"
+                }
+            ]
+        }
+    ],
+    "rewrites": [
+        { "source": "/", "destination": "/api/index" }
+    ]
+}
