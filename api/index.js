@@ -1,31 +1,19 @@
-const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 
 module.exports = async (req, res) => {
-    // Si entras por navegador, verás el 403 que ya tienes
-    if (req.method !== 'POST') {
-        return res.status(403).send('Acceso Denegado: Solo via Salesforce MC.');
-    }
-
-    const token = req.body.jwt;
-    const secret = process.env.SFMC_JWT_SECRET;
-
+    // PRUEBA DE FUEGO: Vamos a ignorar la validación un segundo para ver el HTML
     try {
-        // Validamos el token
-        jwt.verify(token, secret);
-
-        // Leemos el template.html que tienes en la raíz
         const htmlPath = path.join(process.cwd(), 'template.html');
         let html = fs.readFileSync(htmlPath, 'utf8');
-
-        // Metemos el token en el HTML
+        
+        // Si hay un token, lo mostramos; si no, ponemos un aviso
+        const token = req.body ? req.body.jwt : "No llegó token por POST";
         html = html.replace('', token);
 
         res.setHeader('Content-Type', 'text/html');
         return res.status(200).send(html);
     } catch (err) {
-        // Si el secreto está mal o el token es viejo
-        return res.status(401).send('Error de Seguridad: JWT no válido o Secret incorrecto.');
+        return res.status(500).send("Error interno: " + err.message);
     }
 };
