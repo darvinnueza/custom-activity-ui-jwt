@@ -3,32 +3,33 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = async (req, res) => {
-    // BLOQUEO PARA NAVEGADOR: Si no es POST (que es como envía Salesforce el JWT), rechazamos.
+    const secret = process.env.SFMC_JWT_SECRET;
+
+    // Si entras desde el navegador (GET), bloqueamos
     if (req.method !== 'POST') {
-        return res.status(403).send('<h1>403 - Acceso Denegado</h1><p>Esta interfaz solo es accesible desde Salesforce Marketing Cloud.</p>');
+        return res.status(403).send('Acceso Denegado: Solo via Salesforce MC.');
     }
 
     const token = req.body.jwt;
-    const secret = process.env.SFMC_JWT_SECRET;
 
     if (!token) {
-        return res.status(401).send('Falta Token JWT.');
+        return res.status(401).send('Error: No se recibió el token JWT.');
     }
 
     try {
-        // Validamos el token con la llave maestra
+        // Validamos el token
         jwt.verify(token, secret);
 
-        // Leemos el archivo que ahora está "escondido" en la raíz
+        // Leemos el template.html que tienes en la raíz
         const htmlPath = path.join(process.cwd(), 'template.html');
         let html = fs.readFileSync(htmlPath, 'utf8');
 
-        // REEMPLAZO: Aquí es donde el token se imprime de verdad en el recuadro gris
+        // Reemplazamos el marcador con el token real
         html = html.replace('', token);
 
         res.setHeader('Content-Type', 'text/html');
         res.status(200).send(html);
     } catch (err) {
-        return res.status(401).send('Error de Seguridad: JWT Inválido.');
+        return res.status(401).send('Error de Seguridad: JWT inválido o Secret mal configurado.');
     }
 };
