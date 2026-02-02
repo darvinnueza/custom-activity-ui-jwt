@@ -9,30 +9,29 @@ module.exports = async (req, res) => {
 
     let token = null;
 
-    // BUSQUEDA DEL TOKEN: Lo buscamos en todas las formas posibles que usa SFMC
+    // 1. Intentamos sacar el token del body (donde Salesforce lo mete)
     if (req.method === 'POST') {
         if (req.body && req.body.jwt) {
             token = req.body.jwt;
         } else if (typeof req.body === 'string') {
-            // Si viene como texto, intentamos parsearlo
-            try {
-                const parsed = JSON.parse(req.body);
-                token = parsed.jwt;
-            } catch (e) {
-                const params = new URLSearchParams(req.body);
-                token = params.get('jwt');
-            }
+            // Caso 2: Viene como string tipo "jwt=valor..."
+            const params = new URLSearchParams(req.body);
+            token = params.get('jwt');
+        } else if (req.body && typeof req.body === 'object') {
+            // Caso 3: Viene como objeto pero sin la llave directa
+            token = Object.keys(req.body)[0] === 'jwt' ? req.body.jwt : null;
         }
     }
 
-    // SI ENCONTRAMOS EL TOKEN, LO VALIDAMOS Y LO PONEMOS EN EL HTML
+    // 2. Si encontramos algo, lo procesamos
     if (token) {
         try {
             jwt.verify(token, secret);
-            // Reemplazamos el texto de espera por el token real
+            // Reemplazamos el mensaje de espera por el JWT real
             html = html.replace('Esperando interacción de Salesforce...', token);
         } catch (err) {
-            html = html.replace('Esperando interacción de Salesforce...', 'Error de validación: El Secret no coincide.');
+            // Si el token llega pero la firma falla (Secret mal puesto en Vercel)
+            html = html.replace('Esperando interacción de Salesforce...', 'TOKEN RECIBIDO, PERO FIRMA INVÁLIDA (Revisa el Secret)');
         }
     }
 
