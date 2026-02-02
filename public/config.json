@@ -7,7 +7,7 @@
     "type": "Rest",
     "lang": {
         "en-US": {
-            "name": "VoiceBot Custom Activity",
+            "name": "VoiceBot Custom Activity Jwt",
             "description": "Envía mensajes de voz personalizados."
         }
     },
