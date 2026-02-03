@@ -1,119 +1,95 @@
 const fs = require("fs");
 const path = require("path");
-const jwt = require("jsonwebtoken");
-
-function maskSecret(s) {
-  if (!s) return "VACIO";
-  if (process.env.SHOW_SECRET === "1") return s; // solo si tú lo habilitas
-  if (s.length <= 10) return "**********";
-  return s.slice(0, 6) + "..." + s.slice(-4);
-}
+const jwtLib = require("jsonwebtoken");
 
 function safeJson(obj) {
-  try { return JSON.stringify(obj, null, 2); } catch (e) { return String(obj); }
+  try { return JSON.stringify(obj, null, 2); } catch { return String(obj); }
 }
 
 module.exports = async (req, res) => {
-  const secret = process.env.SFMC_JWT_SECRET || "";
-  const secretShown = maskSecret(secret);
+  const SFMC_JWT_SECRET = process.env.SFMC_JWT_SECRET || "";
 
-  // --- Body robusto ---
+  // 1) EL JWT REAL normalmente viene en QUERY: ?jwt=xxx.yyy.zzz
+  //    (porque este endpoint es el "edit.url" que carga el iframe)
+  const jwtFromQuery = req.query && (req.query.jwt || req.query.JWT);
+
+  // 2) A veces llega por body (save/publish/execute), lo dejamos soportado
   let body = req.body;
-  try {
-    if (typeof body === "string") {
-      try {
-        body = JSON.parse(body);
-      } catch (e) {
-        const params = new URLSearchParams(body);
-        body = Object.fromEntries(params.entries());
-      }
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch {
+      const params = new URLSearchParams(body);
+      body = Object.fromEntries(params.entries());
     }
-  } catch (e) {
-    body = {};
   }
+  const jwtFromBody = body && (body.jwt || body.JWT);
 
-  // --- Token candidates (NO asumo nada, muestro TODO) ---
-  const authHeader = req.headers?.authorization || "";
-  const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1] || "";
+  // 3) También existen estos NO-JWT (Fuel tokens) que vienen del requestTokens()
+  const tokenFromBody = body && (body.token || body.fuel2token);
 
-  const tokenCandidates = {
-    "body.jwt": body?.jwt || "",
-    "body.JWT": body?.JWT || "",
-    "body.token": body?.token || "",
-    "body.fuel2token": body?.fuel2token || "",
-    "Authorization(Bearer)": bearer || "",
-    "Authorization(raw)": authHeader || ""
-  };
+  // Elegimos candidato JWT REAL (query primero)
+  const jwtCandidate = jwtFromQuery || jwtFromBody || "";
 
-  // Elegimos el primero no vacío
-  const tokenRecibido =
-    tokenCandidates["body.jwt"] ||
-    tokenCandidates["body.JWT"] ||
-    tokenCandidates["Authorization(Bearer)"] ||
-    tokenCandidates["body.token"] ||
-    "";
+  let verifiedPayload = null;
+  let verifyError = null;
 
-  // Check formato JWT
-  const partes = (tokenRecibido || "").split(".");
-  const pareceJwt = partes.length === 3;
+  // Validación formato JWT: debe tener 2 puntos => 3 partes
+  const looksLikeJwt = typeof jwtCandidate === "string" && jwtCandidate.split(".").length === 3;
 
-  let estado = `NO JWT (formato)`;
-  let verificado = false;
-  let payload = null;
-  let errorVerify = "";
-
-  if (pareceJwt) {
-    estado = "JWT detectado (formato OK) → verificando firma...";
+  if (!SFMC_JWT_SECRET) {
+    verifyError = "Falta SFMC_JWT_SECRET en Vercel.";
+  } else if (!jwtCandidate) {
+    verifyError =
+      "No llegó jwt en query (?jwt=...) ni en body. OJO: token/fuel2token NO es JWT.";
+  } else if (!looksLikeJwt) {
+    verifyError =
+      "Llegó un valor en 'jwt', pero NO tiene formato JWT (no tiene a.b.c). Probablemente estás mirando token/fuel2token.";
+  } else {
     try {
-      if (!secret) throw new Error("SFMC_JWT_SECRET vacío en Vercel");
-      payload = jwt.verify(tokenRecibido, secret);
-      verificado = true;
-      estado = "JWT VALIDADO ✅";
+      verifiedPayload = jwtLib.verify(jwtCandidate, SFMC_JWT_SECRET);
     } catch (e) {
-      errorVerify = e.message;
-      estado = "JWT pero FIRMA INVÁLIDA ❌";
+      verifyError = e.message;
     }
   }
 
-  // --- Render HTML usando tu template.html ---
+  // Cargamos tu template SIN CAMBIAR DISEÑO
   const htmlPath = path.join(process.cwd(), "template.html");
   let html = fs.readFileSync(htmlPath, "utf8");
 
+  // Panel debug (lo que reemplaza TOKEN_DE_SESION_AQUI)
   const resultado = `
     <div style="background:#000;color:#0f0;padding:15px;font-family:monospace;border:2px solid #fff;">
-      <p><strong>1. SECRET (Vercel):</strong><br>
-        <span style="color:#888;font-size:10px;">${secretShown}</span>
+      <p><strong>1) ¿Llegó JWT real por QUERY? (edit.url)</strong><br>
+        <span style="color:#aaa;font-size:11px;">req.query.jwt:</span><br>
+        <span style="font-size:10px;word-break:break-all;">${jwtFromQuery ? jwtFromQuery : "(vacío)"}</span>
       </p>
 
       <hr style="border-color:#555;">
 
-      <p><strong>2. ESTADO:</strong><br>
-        <span style="color:${verificado ? "#0f0" : "#ff4444"};font-size:12px;">${estado}</span>
+      <p><strong>2) ¿Llegó JWT por BODY?</strong><br>
+        <span style="color:#aaa;font-size:11px;">body.jwt:</span><br>
+        <span style="font-size:10px;word-break:break-all;">${jwtFromBody ? jwtFromBody : "(vacío)"}</span>
       </p>
-
-      ${errorVerify ? `
-        <p><strong>Error verify:</strong><br>
-          <span style="color:#ff4444;font-size:10px;">${errorVerify}</span>
-        </p>` : ""}
 
       <hr style="border-color:#555;">
 
-      <p><strong>3. TOKEN ELEGIDO:</strong><br>
-        <span style="font-size:10px;word-break:break-all;color:#9f9;">${tokenRecibido || "VACIO"}</span>
+      <p><strong>3) Tokens NO-JWT (esto es lo que te confundía)</strong><br>
+        <span style="color:#aaa;font-size:11px;">body.token / body.fuel2token:</span><br>
+        <span style="font-size:10px;word-break:break-all;">${tokenFromBody ? tokenFromBody : "(vacío)"}</span>
       </p>
 
-      <p><strong>4. CANDIDATOS (lo que llegó):</strong></p>
-      <pre style="font-size:10px;white-space:pre-wrap;word-break:break-all;color:#fff;background:#111;padding:10px;border:1px dashed #0f0;">${safeJson(tokenCandidates)}</pre>
+      <hr style="border-color:#555;">
 
-      <p><strong>5. BODY COMPLETO:</strong></p>
-      <pre style="font-size:10px;white-space:pre-wrap;word-break:break-all;color:#fff;background:#111;padding:10px;border:1px dashed #0f0;">${safeJson(body)}</pre>
+      <p><strong>4) Resultado validación JWT</strong><br>
+        ${
+          verifiedPayload
+            ? `<span style="color:#0f0;">✅ JWT VÁLIDO</span>
+               <pre style="font-size:11px;white-space:pre-wrap;word-break:break-all;color:#fff;margin-top:10px;">${safeJson(verifiedPayload)}</pre>`
+            : `<span style="color:#ff4444;">❌ NO AUTORIZADO:</span>
+               <span style="color:#ffaaaa;">${verifyError || "sin detalle"}</span>`
+        }
+      </p>
 
-      ${payload ? `
-        <p><strong>6. PAYLOAD (VERIFICADO):</strong></p>
-        <pre style="font-size:10px;white-space:pre-wrap;word-break:break-all;color:#fff;background:#111;padding:10px;border:1px dashed #0f0;">${safeJson(payload)}</pre>
-      ` : ""}
-
-      <p style="margin-top:15px;font-size:12px;color:#fff;"><strong>MÉTODO:</strong> ${req.method}</p>
+      <p style="margin-top:10px;font-size:12px;color:#fff;"><strong>MÉTODO:</strong> ${req.method}</p>
     </div>
   `;
 
