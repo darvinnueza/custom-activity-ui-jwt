@@ -1,32 +1,29 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = async (req, res) => {
-    // El Secret que ya tienes en Vercel
     const secret = process.env.SFMC_JWT_SECRET;
     
     if (req.method === 'POST') {
         const token = req.body.jwt;
 
         try {
-            // AQUÍ OCURRE LA MAGIA: 
-            // Si el secret es incorrecto, esto lanza un error.
+            // AQUÍ VALIDAMOS Y DECODIFICAMOS
             const decoded = jwt.verify(token, secret);
 
-            // Si llegamos aquí, el token es 100% real y seguro.
-            console.log("DATOS DECRYPTADOS:", decoded);
+            // Ahora verás en tu consola o pantalla los datos reales
+            console.log("CONTENIDO DEL JWT:", decoded);
 
-            return res.status(200).json({
-                status: "success",
-                message: "JWT Validado correctamente",
-                data: decoded // Aquí verás quién te llama desde Salesforce
-            });
+            return res.status(200).send(`
+                <div style="color: #0f0; background: #000; padding: 20px;">
+                    <h3>¡JWT VALIDADO!</h3>
+                    <p><strong>ID de la Actividad:</strong> ${decoded.activityId || 'N/A'}</p>
+                    <p><strong>Contexto:</strong> Journey Builder</p>
+                    <pre>${JSON.stringify(decoded, null, 2)}</pre>
+                </div>
+            `);
         } catch (err) {
-            return res.status(401).json({
-                status: "error",
-                message: "Firma JWT inválida: " + err.message
-            });
+            return res.status(401).send("Error de firma: " + err.message);
         }
     }
-    
-    res.status(200).send("Esperando POST con JWT...");
+    res.status(200).send("Esperando POST...");
 };
