@@ -1,47 +1,45 @@
-/* global Postmonger, $ */
-
+/* global Postmonger */
 var connection = new Postmonger.Session();
 var payload = {};
 
 $(window).ready(function () {
-  connection.trigger("ready");
+    connection.trigger("ready");
 });
 
-connection.on("initActivity", function (data) {
-  payload = data || {};
+connection.on("initActivity", initialize);
+connection.on("clickedNext", save);
 
-  // Cargar valores previos
-  var inArgs =
-    payload.arguments &&
-    payload.arguments.execute &&
-    payload.arguments.execute.inArguments
-      ? payload.arguments.execute.inArguments
-      : [];
+function initialize(data) {
+    payload = data || {};
 
-  inArgs.forEach(function (obj) {
-    if (obj && obj.message) $("#message-input").val(obj.message);
-  });
-});
+    // Cargar valores guardados si existen
+    var inArgs =
+        payload.arguments &&
+        payload.arguments.execute &&
+        payload.arguments.execute.inArguments
+        ? payload.arguments.execute.inArguments
+        : [];
 
-connection.on("clickedNext", function () {
-  var message = $("#message-input").val() || "";
+    inArgs.forEach(function (obj) {
+        if (obj.message) $("#message-input").val(obj.message);
+    });
+}
 
-  payload.arguments = payload.arguments || {};
-  payload.arguments.execute = payload.arguments.execute || {};
-  payload.arguments.execute.inArguments = [
-    {
-      message: message,
-      contactKey: "{{Contact.Key}}"
-    }
-  ];
+function save() {
+    var message = $("#message-input").val();
 
-  payload.metaData = payload.metaData || {};
-  payload.metaData.isConfigured = true;
+    payload.arguments = payload.arguments || {};
+    payload.arguments.execute = payload.arguments.execute || {};
+    payload.arguments.execute.inArguments = [
+        {
+            message: message,
+            contactKey: "{{Contact.Key}}"
+        }
+    ];
 
-  connection.trigger("updateActivity", payload);
-  connection.trigger("nextStep");
-});
+    payload.metaData = payload.metaData || {};
+    payload.metaData.isConfigured = true;
 
-connection.on("clickedBack", function () {
-  connection.trigger("prevStep");
-});
+    connection.trigger("updateActivity", payload);
+    connection.trigger("nextStep");
+}
