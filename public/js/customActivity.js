@@ -3,12 +3,12 @@ var payload = {};
 
 $(window).ready(onRender);
 
-// Escuchamos la inicialización y la llegada de tokens
+// 1. Escuchamos los eventos de Salesforce
 connection.on('initActivity', initialize);
 connection.on('requestedTokens', onGetTokens);
 
 function onRender() {
-    // Avisamos que estamos listos y pedimos el Token inmediatamente
+    // Pedimos el Token a Salesforce
     connection.trigger('ready');
     connection.trigger('requestTokens');
 }
@@ -37,11 +37,10 @@ function initialize(data) {
     });
 }
 
-// ESTA FUNCIÓN ES LA QUE ATRAPA EL TOKEN Y LO ENVÍA A TU INDEX.JS
+// 2. Aquí atrapamos el Token y matamos el círculo de carga
 function onGetTokens(tokens) {
-    console.log("¡Token recibido desde Postmonger!", tokens);
+    console.log("¡Token recibido!", tokens);
     
-    // Si el token existe, hacemos un POST manual a tu API para actualizar la vista
     if (tokens && tokens.token) {
         fetch('/api/index', {
             method: 'POST',
@@ -50,12 +49,10 @@ function onGetTokens(tokens) {
         })
         .then(response => response.text())
         .then(html => {
-            // Actualizamos el contenido de la página con la respuesta del servidor
-            document.open();
-            document.write(html);
-            document.close();
+            // CAMBIO CLAVE: Reemplazamos el contenido sin bloquear Salesforce
+            document.body.innerHTML = html;
         })
-        .catch(err => console.error("Error enviando token al servidor:", err));
+        .catch(err => console.error("Error enviando token:", err));
     }
 }
 

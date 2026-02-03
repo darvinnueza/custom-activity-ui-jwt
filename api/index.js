@@ -1,59 +1,60 @@
-const jwt = require('jsonwebtoken');
-
 module.exports = async (req, res) => {
-    // 1. Configuración de cabeceras para evitar bloqueos
+    // 1. Cabeceras de seguridad y CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    const secret = process.env.SFMC_JWT_SECRET || "NO_HAY_SECRET_EN_VERCEL";
-    
-    // Variables de diagnóstico
-    let diagnostico = {
-        paso1_post: "No recibido",
-        paso2_token: "Vacío",
-        paso3_validacion: "Pendiente",
-        paso4_data: null
-    };
+    let tokenRecibido = "No hay token";
+    let datosDecodificados = {};
 
     if (req.method === 'POST') {
-        diagnostico.paso1_post = "✅ ¡POST Recibido!";
-        const token = req.body.jwt;
-
-        if (token) {
-            diagnostico.paso2_token = "✅ Token detectado (empieza por: " + token.substring(0, 10) + "...)";
+        try {
+            // MANEJO ROBUSTO DEL BODY:
+            let body = req.body;
             
-            try {
-                // AQUÍ COMPARAMOS EL TOKEN CON TU SECRET
-                const decoded = jwt.verify(token, secret);
-                diagnostico.paso3_validacion = "✅ ÉXITO: El Secret y el Token coinciden.";
-                diagnostico.paso4_data = decoded;
-            } catch (err) {
-                diagnostico.paso3_validacion = "❌ ERROR: El Secret NO coincide (Firma inválida: " + err.message + ")";
+            // Si el body llega como string (pasa mucho en Vercel), lo parseamos
+            if (typeof body === 'string') {
+                try {
+                    body = JSON.parse(body);
+                } catch (e) {
+                    // Si no es JSON, puede ser URL encoded
+                    const params = new URLSearchParams(body);
+                    body = Object.fromEntries(params.entries());
+                }
             }
+
+            const rawToken = body.jwt;
+            
+            if (rawToken) {
+                tokenRecibido = "✅ Recibido";
+                // Decodificamos la parte central del JWT (Payload)
+                const base64Payload = rawToken.split('.')[1];
+                const decodedText = Buffer.from(base64Payload, 'base64').toString();
+                datosDecodificados = JSON.parse(decodedText);
+            }
+        } catch (err) {
+            tokenRecibido = "❌ Error procesando el body";
+            datosDecodificados = { error: err.message };
         }
     }
 
-    // Respuesta visual clara para que dejes de adivinar
-    const htmlResponse = `
-        <div style="font-family: monospace; background: #121212; color: #fff; padding: 20px; border-radius: 8px;">
-            <h2 style="color: #00ff00;">🔍 ESTADO DE LA CONEXIÓN</h2>
-            <hr border="1" color="#333">
-            
-            <p><b>1. ¿LLEGÓ EL POST?:</b> ${diagnostico.paso1_post}</p>
-            <p><b>2. ¿HAY TOKEN EN EL BODY?:</b> ${diagnostico.paso2_token}</p>
-            <p><b>3. ¿EL SECRET ES VÁLIDO?:</b> <span style="color: ${diagnostico.paso3_validacion.includes('✅') ? '#00ff00' : '#ff0000'}">${diagnostico.paso3_validacion}</span></p>
-            
-            <div style="background: #000; padding: 10px; border: 1px solid #00ff00; margin-top: 10px;">
-                <b>4. DATOS DECODIFICADOS:</b>
-                <pre style="font-size: 11px; color: #00ff00;">${diagnostico.paso4_data ? JSON.stringify(diagnostico.paso4_data, null, 2) : 'No hay datos para mostrar'}</pre>
+    // HTML de respuesta que se inyectará en tu Salesforce
+    const html = `
+        <div style="font-family:monospace; background:#1a1a1a; color:#00ff00; padding:20px; border:2px solid #00ff00; border-radius:10px;">
+            <h3 style="margin-top:0;">🚀 SISTEMA OPERATIVO</h3>
+            <p><b>MÉTODO:</b> ${req.method}</p>
+            <p><b>JWT:</b> ${tokenRecibido}</p>
+            <hr style="border:1px solid #333;">
+            <b>CONTENIDO DEL TOKEN (DATOS REALES):</b>
+            <pre style="background:#000; padding:15px; border:1px solid #333; overflow:auto; max-height:200px; color:#00ff00;">${JSON.stringify(datosDecodificados, null, 2)}</pre>
+            <div style="margin-top:15px; font-size:11px; color:#888;">
+                Si ves datos arriba, la conexión es exitosa.
             </div>
-            <p style="font-size: 10px; color: #666;">Secret actual (primeros 5): ${secret.substring(0, 5)}***</p>
         </div>
     `;
 
     res.setHeader('Content-Type', 'text/html');
-    return res.status(200).send(htmlResponse);
+    return res.status(200).send(html);
 };
