@@ -1,107 +1,67 @@
-const fs = require("fs");
-const path = require("path");
-const jwt = require("jsonwebtoken");
+const fs = require('fs');
+const path = require('path');
 
 module.exports = async (req, res) => {
-  const secret = process.env.SFMC_JWT_SECRET || "";
-  let tokenRecibido = "";
-  let verificacionHtml = "";
-  let payloadHtml = "";
-  let estadoHtml = `<span style="color:#ff4444;">NO VALIDADO</span>`;
+    const elSecretDeVercel = process.env.SFMC_JWT_SECRET || "VARIABLE NO ENCONTRADA EN VERCEL";
+    let elTokenDeSalesforce = "NO LLEGÓ NADA (Sigue en modo GET)";
+    let decodificacionHtml = "";
 
-  // Solo permitimos POST (porque ahí viene el JWT)
-  if (req.method !== "POST") {
-    const htmlPath = path.join(process.cwd(), "template.html");
-    let html = fs.readFileSync(htmlPath, "utf8");
+    if (req.method === 'POST') {
+        try {
+            let body = req.body;
 
-    html = html.replace(
-      "TOKEN_DE_SESION_AQUI",
-      `<div style="background:#000;color:#fff;padding:15px;font-family:monospace;border:2px solid #fff;">
-        <p><strong>Esperando POST desde Journey Builder...</strong></p>
-        <p style="font-size:12px;color:#aaa;">Método actual: ${req.method}</p>
-      </div>`
-    );
+            // Aseguramos que el body sea un objeto
+            if (typeof body === 'string') {
+                try { body = JSON.parse(body); } catch (e) {
+                    const params = new URLSearchParams(body);
+                    body = Object.fromEntries(params.entries());
+                }
+            }
 
-    res.setHeader("Content-Type", "text/html");
-    return res.status(200).send(html);
-  }
+            // Buscamos el JWT (Salesforce a veces lo manda como 'jwt' o dentro de los argumentos)
+            let jwtEncontrado = body.jwt || body.JWT || null;
 
-  // --- Parse body robusto (JSON o x-www-form-urlencoded) ---
-  let body = req.body;
-  try {
-    if (typeof body === "string") {
-      try {
-        body = JSON.parse(body);
-      } catch (e) {
-        const params = new URLSearchParams(body);
-        body = Object.fromEntries(params.entries());
-      }
-    }
-  } catch (e) {
-    body = {};
-  }
-
-  // --- Extraer JWT ---
-  // SFMC normalmente lo manda como body.jwt cuando useJwt=true
-  tokenRecibido = body?.jwt || body?.JWT || "";
-
-  // fallback: Authorization: Bearer <token>
-  if (!tokenRecibido && req.headers && req.headers.authorization) {
-    const m = req.headers.authorization.match(/^Bearer\s+(.+)$/i);
-    if (m) tokenRecibido = m[1];
-  }
-
-  // Si no llegó token, 401
-  if (!tokenRecibido) {
-    return res.status(401).send("NO AUTORIZADO: no llegó JWT");
-  }
-
-  // --- Validar que parezca JWT (3 partes con puntos) ---
-  const partes = tokenRecibido.split(".");
-  if (partes.length !== 3) {
-    return res
-      .status(401)
-      .send("NO AUTORIZADO: el token recibido NO es un JWT válido (formato).");
-  }
-
-  // --- Verificar firma con tu SFMC_JWT_SECRET ---
-  try {
-    if (!secret) {
-      return res.status(500).send("ERROR: SFMC_JWT_SECRET no está configurado.");
+            if (jwtEncontrado) {
+                elTokenDeSalesforce = jwtEncontrado;
+                const partes = jwtEncontrado.split('.');
+                
+                if (partes.length >= 2) {
+                    const base64Payload = partes[1];
+                    // Decodificamos de Base64 a texto y luego a JSON
+                    const decodificadoRaw = Buffer.from(base64Payload, 'base64').toString('utf-8');
+                    const jsonDecodificado = JSON.parse(decodificadoRaw);
+                    
+                    decodificacionHtml = `
+                        <div style="margin-top: 15px; background: #111; color: #fff; padding: 10px; border: 1px dashed #0f0;">
+                            <strong style="color: #0f0;">3. CONTENIDO REAL DEL TOKEN (JSON):</strong>
+                            <pre style="font-size: 11px; white-space: pre-wrap; word-break: break-all; color: #fff; margin-top: 10px;">${JSON.stringify(jsonDecodificado, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } else {
+                elTokenDeSalesforce = "POST RECIBIDO PERO SIN CAMPO JWT. BODY: " + JSON.stringify(body);
+            }
+        } catch (err) {
+            decodificacionHtml = `<p style="color: #ff4444;">❌ Error en proceso: ${err.message}</p>`;
+        }
     }
 
-    const decoded = jwt.verify(tokenRecibido, secret);
+    const htmlPath = path.join(process.cwd(), 'template.html');
+    let html = fs.readFileSync(htmlPath, 'utf8');
 
-    estadoHtml = `<span style="color:#0f0;">VALIDADO ✅</span>`;
-    verificacionHtml = `<p><strong>JWT:</strong> ${estadoHtml}</p>`;
-
-    payloadHtml = `
-      <div style="margin-top: 15px; background: #111; color: #fff; padding: 10px; border: 1px dashed #0f0;">
-        <strong style="color: #0f0;">PAYLOAD (JWT VERIFIED):</strong>
-        <pre style="font-size: 11px; white-space: pre-wrap; word-break: break-all; color: #fff; margin-top: 10px;">${JSON.stringify(decoded, null, 2)}</pre>
-      </div>
+    const resultado = `
+        <div style="background: #000; color: #0f0; padding: 15px; font-family: monospace; border: 2px solid #fff;">
+            <p><strong>1. SECRET (Vercel):</strong><br><span style="color: #888; font-size: 10px;">${elSecretDeVercel}</span></p>
+            <hr style="border-color: #555;">
+            <p><strong>2. TOKEN (body.jwt):</strong><br><span style="font-size: 10px; word-break: break-all;">${elTokenDeSalesforce}</span></p>
+            
+            ${decodificacionHtml}
+            
+            <p style="margin-top: 15px; font-size: 12px; color: #fff;"><strong>METODO:</strong> ${req.method}</p>
+        </div>
     `;
-  } catch (err) {
-    return res.status(401).send(`NO AUTORIZADO: JWT inválido (${err.message})`);
-  }
 
-  // --- Render HTML (SIN mostrar el secret) ---
-  const htmlPath = path.join(process.cwd(), "template.html");
-  let html = fs.readFileSync(htmlPath, "utf8");
-
-  const resultado = `
-    <div style="background:#000;color:#0f0;padding:15px;font-family:monospace;border:2px solid #fff;">
-      ${verificacionHtml}
-      <hr style="border-color:#555;">
-      <p><strong>Token recibido:</strong><br>
-        <span style="font-size:10px;word-break:break-all;color:#9f9;">${tokenRecibido}</span>
-      </p>
-      ${payloadHtml}
-      <p style="margin-top:15px;font-size:12px;color:#fff;"><strong>MÉTODO:</strong> ${req.method}</p>
-    </div>
-  `;
-
-  html = html.replace("TOKEN_DE_SESION_AQUI", resultado);
-  res.setHeader("Content-Type", "text/html");
-  return res.status(200).send(html);
+    html = html.replace('TOKEN_DE_SESION_AQUI', resultado);
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(200).send(html);
 };
