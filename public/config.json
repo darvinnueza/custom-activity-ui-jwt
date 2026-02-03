@@ -19,7 +19,7 @@
         }
     },
     "configurationArguments": {
-        "applicationExtensionKey": "tu-extension-key-aqui",
+        "applicationExtensionKey": "a6559faf-9a32-4eb2-a0e4-0b5a819a94d8",
         "save": { "url": "https://custom-activity-ui-dun.vercel.app/api/save", "useJwt": true },
         "publish": { "url": "https://custom-activity-ui-dun.vercel.app/api/publish", "useJwt": true }
     },
