@@ -1,32 +1,40 @@
 {
-    "workflowApiVersion": "1.1",
-    "metaData": {
-        "icon": "images/icon40.png",
-        "category": "message"
-    },
-    "type": "Rest",
-    "lang": {
-        "en-US": {
-            "name": "VoiceBot Custom Activity Jwt",
-            "description": "Envía mensajes de voz personalizados."
-        }
-    },
-    "arguments": {
-        "execute": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/execute",
-            "verb": "POST",
-            "useJwt": true
-        }
-    },
-    "configurationArguments": {
-        "applicationExtensionKey": "a6559faf-9a32-4eb2-a0e4-0b5a819a94d8",
-        "save": { "url": "https://custom-activity-ui-dun.vercel.app/api/save", "useJwt": true },
-        "publish": { "url": "https://custom-activity-ui-dun.vercel.app/api/publish", "useJwt": true }
-    },
-    "edit": {
-        "url": "https://custom-activity-ui-dun.vercel.app/api/index",
-        "height": 500,
-        "width": 700,
-        "useJwt": true
+  "workflowApiVersion": "1.1",
+  "metaData": {
+    "icon": "images/icon40.png",
+    "category": "custom"
+  },
+  "type": "REST",
+  "lang": {
+    "en-US": {
+      "name": "VoiceBot Custom Activity Jwt",
+      "description": "Envía mensajes de voz personalizados."
     }
+  },
+  "arguments": {
+    "execute": {
+      "url": "https://custom-activity-ui-dun.vercel.app/api/execute",
+      "verb": "POST",
+      "useJwt": true
+    }
+  },
+  "configurationArguments": {
+    "applicationExtensionKey": "a6559faf-9a32-4eb2-a0e4-0b5a819a94d8",
+    "save": {
+      "url": "https://custom-activity-ui-dun.vercel.app/api/save",
+      "useJwt": true
+    },
+    "publish": {
+      "url": "https://custom-activity-ui-dun.vercel.app/api/publish",
+      "useJwt": true
+    }
+  },
+  "userInterfaces": {
+    "configModal": {
+      "url": "https://custom-activity-ui-dun.vercel.app/",
+      "height": 500,
+      "width": 700,
+      "fullscreen": false
+    }
+  }
 }
