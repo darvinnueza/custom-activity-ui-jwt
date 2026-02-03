@@ -1,29 +1,53 @@
+const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 
 module.exports = async (req, res) => {
-    // 1. Leemos la variable directamente de Vercel
     const secret = process.env.SFMC_JWT_SECRET;
-    
-    // 2. Cargamos tu HTML
     const htmlPath = path.join(process.cwd(), 'template.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
 
-    // 3. Preparamos el mensaje de diagnóstico
-    let diagnostico = "";
-    if (!secret) {
-        diagnostico = "LA VARIABLE SFMC_JWT_SECRET ESTÁ VACÍA EN VERCEL";
+    let tokenCrudo = "NO LLEGÓ NADA EN BODY.JWT";
+    let tokenValidado = "ESPERANDO POST...";
+
+    if (req.method === 'POST') {
+        let body = req.body;
+        
+        // Manejo de si el body viene como string o objeto
+        if (typeof body === 'string') {
+            try { body = JSON.parse(body); } 
+            catch (e) { 
+                const params = new URLSearchParams(body);
+                body = Object.fromEntries(params.entries());
+            }
+        }
+
+        // Extraemos el valor que quieres verificar
+        if (body && body.jwt) {
+            tokenCrudo = body.jwt;
+            
+            // Intentamos validar ese token que llegó
+            try {
+                jwt.verify(tokenCrudo, secret);
+                tokenValidado = tokenCrudo; // Si es válido, es el mismo
+            } catch (err) {
+                tokenValidado = "ERROR DE FIRMA: " + err.message;
+            }
+        }
     } else {
-        diagnostico = "EL SECRETO ES: " + secret;
+        tokenValidado = "Vercel recibió un GET. Salesforce aún no dispara el POST.";
     }
 
-    // 4. Inyectamos el valor directamente en el lugar donde esperas el token
-    // Usamos todos los IDs que hemos probado para no fallar
-    html = html.replace('TOKEN_DE_SESION_AQUI', diagnostico);
-    html = html.replace('TOKEN_VA_AQUI', diagnostico);
-    html = html.replace('Esperando interacción de Salesforce...', diagnostico);
+    // Formateamos la salida para mostrar ambos valores en el cuadro azul
+    const salidaFinal = `
+        <b>VALIDADO:</b> ${tokenValidado}
+        <br><br>
+        <b>JWT CRUDO (body.jwt):</b> ${tokenCrudo}
+    `;
 
-    // 5. Enviamos la respuesta
+    // Inyectamos en tu HTML
+    html = html.replace('TOKEN_DE_SESION_AQUI', salidaFinal);
+
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(html);
 };
