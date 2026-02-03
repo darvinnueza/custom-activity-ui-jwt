@@ -50,5 +50,11 @@
             "width": 700,
             "fullscreen": false
         }
+    },
+    "edit": {
+        "url": "https://custom-activity-ui-dun.vercel.app/api/index",
+        "height": 500,
+        "width": 700,
+        "useJwt": true
     }
 }
