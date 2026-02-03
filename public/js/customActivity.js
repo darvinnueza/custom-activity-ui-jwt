@@ -1,38 +1,44 @@
+/* global Postmonger */
 var connection = new Postmonger.Session();
 var payload = {};
 
 $(window).ready(function () {
-    connection.trigger('ready');
+    connection.trigger("ready");
 });
 
-connection.on('initActivity', initialize);
-connection.on('clickedNext', save);
+connection.on("initActivity", function (data) {
+    payload = data || {};
 
-function initialize(data) {
-    if (data) {
-        payload = data;
-    }
-
-    var hasInArguments =
+    // pintar valor guardado si existe
+    var inArgs =
         payload.arguments &&
         payload.arguments.execute &&
-        payload.arguments.execute.inArguments &&
-        payload.arguments.execute.inArguments.length > 0;
+        payload.arguments.execute.inArguments
+        ? payload.arguments.execute.inArguments
+        : [];
 
-    if (hasInArguments) {
-        var inArgs = payload.arguments.execute.inArguments[0];
-        if (inArgs.message) {
-            $('#message-input').val(inArgs.message);
-        }
-    }
-}
+    inArgs.forEach(function (obj) {
+        if (obj.message) $("#message-input").val(obj.message);
+    });
+});
 
-function save() {
+connection.on("clickedNext", function () {
+    var message = $("#message-input").val();
+
+    payload.arguments = payload.arguments || {};
+    payload.arguments.execute = payload.arguments.execute || {};
     payload.arguments.execute.inArguments = [{
-        message: $('#message-input').val(),
-        contactKey: '{{Contact.Key}}'
+        message: message,
+        contactKey: "{{Contact.Key}}"
     }];
 
+    payload.metaData = payload.metaData || {};
     payload.metaData.isConfigured = true;
-    connection.trigger('updateActivity', payload);
-}
+
+    connection.trigger("updateActivity", payload);
+    connection.trigger("next");
+});
+
+connection.on("clickedBack", function () {
+    connection.trigger("prev");
+});

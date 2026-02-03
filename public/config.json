@@ -7,35 +7,26 @@
     "type": "REST",
     "lang": {
         "en-US": {
-            "name": "VoiceBot Custom Activity Jwt",
-            "description": "Envía mensajes de voz personalizados."
+        "name": "VoiceBot Custom Activity Jwt",
+        "description": "Envía mensajes de voz personalizados."
         }
     },
     "arguments": {
         "execute": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/execute",
-            "verb": "POST",
-            "useJwt": true
+        "url": "https://custom-activity-ui-dun.vercel.app/api/execute",
+        "verb": "POST",
+        "useJwt": true
         }
     },
     "configurationArguments": {
         "applicationExtensionKey": "a6559faf-9a32-4eb2-a0e4-0b5a819a94d8",
-        "save": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/save",
-            "useJwt": true
-        },
-        "publish": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/publish",
-            "useJwt": true
-        }
+        "save": { "url": "https://custom-activity-ui-dun.vercel.app/api/save", "useJwt": true },
+        "publish": { "url": "https://custom-activity-ui-dun.vercel.app/api/publish", "useJwt": true }
     },
-    "userInterfaces": {
-        "configModal": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/index",
-            "height": 500,
-            "width": 700,
-            "fullscreen": false,
-            "useJwt": true
-        }
+    "edit": {
+        "url": "https://custom-activity-ui-dun.vercel.app/api/index",
+        "height": 500,
+        "width": 700,
+        "useJwt": true
     }
 }
