@@ -13,43 +13,15 @@
     },
     "arguments": {
         "execute": {
-            "inArguments": [],
-            "outArguments": [],
             "url": "https://custom-activity-ui-dun.vercel.app/api/execute",
             "verb": "POST",
-            "body": "",
-            "header": "",
             "useJwt": true
         }
     },
     "configurationArguments": {
         "applicationExtensionKey": "tu-extension-key-aqui",
-        "save": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/save",
-            "useJwt": true
-        },
-        "publish": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/publish",
-            "useJwt": true
-        },
-        "validate": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/validate",
-            "useJwt": true
-        },
-        "stop": {
-            "url": "https://custom-activity-ui-dun.vercel.app/api/stop",
-            "useJwt": true
-        }
-    },
-    "wizardSteps": [
-        { "label": "Configurar Mensaje", "key": "step1" }
-    ],
-    "userInterfaces": {
-        "configModal": {
-            "height": 500,
-            "width": 700,
-            "fullscreen": false
-        }
+        "save": { "url": "https://custom-activity-ui-dun.vercel.app/api/save", "useJwt": true },
+        "publish": { "url": "https://custom-activity-ui-dun.vercel.app/api/publish", "useJwt": true }
     },
     "edit": {
         "url": "https://custom-activity-ui-dun.vercel.app/api/index",
