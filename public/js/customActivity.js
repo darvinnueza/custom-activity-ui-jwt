@@ -8,8 +8,12 @@ $(window).ready(onRender);
 connection.on('initActivity', initialize);
 
 function onRender() {
-    // Avisamos a Salesforce que la interfaz está lista para recibir datos
+    // 1. Avisamos que estamos listos
     connection.trigger('ready');
+    
+    // 2. Pedimos explícitamente los tokens (esto fuerza a SFMC a responder)
+    connection.trigger('requestTokens');
+    connection.trigger('requestEndpoints');
 }
 
 function initialize(data) {
