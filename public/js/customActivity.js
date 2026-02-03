@@ -10,22 +10,17 @@ $(window).ready(function () {
 connection.on("initActivity", function (data) {
   payload = data || {};
 
-  // Cargar valor guardado (message) si existe
-  try {
-    var inArgs =
-      payload &&
-      payload.arguments &&
-      payload.arguments.execute &&
-      payload.arguments.execute.inArguments
-        ? payload.arguments.execute.inArguments
-        : [];
+  // Cargar valores previos
+  var inArgs =
+    payload.arguments &&
+    payload.arguments.execute &&
+    payload.arguments.execute.inArguments
+      ? payload.arguments.execute.inArguments
+      : [];
 
-    inArgs.forEach(function (obj) {
-      if (obj && obj.message) $("#message-input").val(obj.message);
-    });
-  } catch (e) {
-    // no hacemos nada
-  }
+  inArgs.forEach(function (obj) {
+    if (obj && obj.message) $("#message-input").val(obj.message);
+  });
 });
 
 connection.on("clickedNext", function () {
@@ -44,9 +39,9 @@ connection.on("clickedNext", function () {
   payload.metaData.isConfigured = true;
 
   connection.trigger("updateActivity", payload);
-  connection.trigger("next");
+  connection.trigger("nextStep");
 });
 
 connection.on("clickedBack", function () {
-  connection.trigger("back");
+  connection.trigger("prevStep");
 });
