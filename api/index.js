@@ -9,30 +9,28 @@ module.exports = async (req, res) => {
 
     let token = null;
 
-    // 1. Intentamos sacar el token del body (donde Salesforce lo mete)
+    // Extraer token de Salesforce
     if (req.method === 'POST') {
         if (req.body && req.body.jwt) {
             token = req.body.jwt;
         } else if (typeof req.body === 'string') {
-            // Caso 2: Viene como string tipo "jwt=valor..."
             const params = new URLSearchParams(req.body);
             token = params.get('jwt');
-        } else if (req.body && typeof req.body === 'object') {
-            // Caso 3: Viene como objeto pero sin la llave directa
-            token = Object.keys(req.body)[0] === 'jwt' ? req.body.jwt : null;
         }
     }
 
-    // 2. Si encontramos algo, lo procesamos
+    // SI HAY TOKEN: Lo validamos y lo inyectamos
     if (token) {
         try {
             jwt.verify(token, secret);
-            // Reemplazamos el mensaje de espera por el JWT real
-            html = html.replace('Esperando interacción de Salesforce...', token);
+            // Reemplazo directo sobre el ID que pusimos arriba
+            html = html.replace('TOKEN_VA_AQUI', token);
         } catch (err) {
-            // Si el token llega pero la firma falla (Secret mal puesto en Vercel)
-            html = html.replace('Esperando interacción de Salesforce...', 'TOKEN RECIBIDO, PERO FIRMA INVÁLIDA (Revisa el Secret)');
+            html = html.replace('TOKEN_VA_AQUI', 'JWT_INVALIDO_REVISA_SECRET');
         }
+    } else {
+        // SI NO HAY TOKEN (Acceso externo):
+        html = html.replace('TOKEN_VA_AQUI', 'Sin token (Acceso fuera de Salesforce)');
     }
 
     res.setHeader('Content-Type', 'text/html');
