@@ -7,33 +7,23 @@
     "type": "REST",
     "lang": {
         "en-US": {
-            "name": "VoiceBot Custom Activity Jwt",
-            "description": "Envía mensajes de voz personalizados."
+        "name": "VoiceBot Custom Activity Jwt",
+        "description": "Envía mensajes de voz personalizados."
         }
     },
     "arguments": {
         "execute": {
-            "url": "https://custom-activity-ui-jwt.vercel.app/api/execute",
-            "verb": "POST",
-            "useJwt": true
+            "inArguments": [],
+            "outArguments": [],
+            "url": "https://custom-activity-ui-jwt.vercel.app/api/execute"
         }
     },
     "configurationArguments": {
         "applicationExtensionKey": "a6559faf-9a32-4eb2-a0e4-0b5a819a94d8",
-        "save": {
-            "url": "https://custom-activity-ui-jwt.vercel.app/api/save",
-            "verb": "POST",
-            "useJwt": true
-        },
         "publish": {
-            "url": "https://custom-activity-ui-jwt.vercel.app/api/publish",
-            "verb": "POST",
-            "useJwt": true
-        },
-        "validate": {
-            "url": "https://custom-activity-ui-jwt.vercel.app/api/validate",
-            "verb": "POST",
-            "useJwt": true
+            "url": "https://custom-activity-ui-jwt.vercel.app/",
+            "height": 500,
+            "width": 700
         }
     },
     "userInterfaces": {
