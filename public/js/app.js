@@ -85,7 +85,7 @@
 
         payload.arguments.execute = payload.arguments.execute || {};
         payload.arguments.execute.inArguments = [
-            { uiConfigured: true }
+        { uiConfigured: true }
         ];
 
         session.trigger("updateActivity", payload);

@@ -9,9 +9,9 @@
             body { font-family: Arial, sans-serif; padding: 16px; background:#fff; }
             .box { border:1px solid #ddd; border-radius:12px; padding:12px; }
             #loading { color:#555; }
-            #denied { color:#b00020; display:none; }
+            #noauth { color:#b00020; display:none; }
             #ok { color:#0b6b0b; display:none; }
-            pre { background:#f6f6f6; padding:10px; border-radius:10px; overflow:auto; }
+            pre { background:#f6f6f6; padding:10px; border-radius:10px; }
         </style>
     </head>
 
@@ -20,12 +20,7 @@
             <h3>VoiceBot – Configuración</h3>
 
             <div id="loading">Validando acceso...</div>
-
-            <div id="denied">
-                <strong>Acceso denegado</strong><br/>
-                Esta interfaz solo puede abrirse desde Salesforce Marketing Cloud (Journey Builder).
-            </div>
-
+            <div id="noauth">No autorizado. Abra esta UI desde Journey Builder.</div>
             <div id="ok">Acceso validado ✅</div>
 
             <pre id="debug"></pre>
