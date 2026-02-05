@@ -21,38 +21,64 @@
 
     const session = new Postmonger.Session();
     let payload = {};
+    let uiJwt = null; // opcional si luego lo quieres usar
 
     session.on("initActivity", d => payload = d || {});
 
     session.on("requestedTokens", async (tokens) => {
         try {
-            const r = await fetch(`${API_BASE}/api/ui-session`, {
-                method:"POST",
-                headers:{ "Content-Type":"application/json" },
-                body: JSON.stringify({
-                tokens,
-                journeyId: payload?.key,
-                activityId: payload?.id
-                })
-            });
+        const r = await fetch(`${API_BASE}/api/ui-session`, {
+            method:"POST",
+            headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify({
+            tokens,
+            journeyId: payload?.key,
+            activityId: payload?.id
+            })
+        });
 
-            const data = await r.json();
-            if (!r.ok || !data.ui_jwt) throw new Error("JWT_DENIED");
+        const data = await r.json();
+        if (!r.ok || !data.ui_jwt) throw new Error("JWT_DENIED");
+        uiJwt = data.ui_jwt;
 
-            const ping = await fetch(`${API_BASE}/api/ui-ping`, {
-                headers:{ Authorization:`Bearer ${data.ui_jwt}` }
-            }).then(x=>x.json());
+        const ping = await fetch(`${API_BASE}/api/ui-ping`, {
+            headers:{ Authorization:`Bearer ${uiJwt}` }
+        }).then(x=>x.json());
 
-            hide(loading); show(ok);
-            log({ session:data, ping });
+        hide(loading); show(ok);
+        log({ session:data, ping });
 
-            // Marca actividad como válida
-            session.trigger("setActivityValid", true);
+        session.trigger("setActivityValid", true);
 
         } catch (e) {
             hide(loading); show(noauth);
             log({ error:String(e.message||e) });
         }
+    });
+
+    // ✅ ESTO ES LO QUE TE FALTABA: manejar el botón "Listo"
+    session.on("clickedNext", () => {
+        // 1) asegurar estructura
+        payload = payload || {};
+        payload.arguments = payload.arguments || {};
+        payload.metaData = payload.metaData || {};
+
+        // 2) marcar configurada
+        payload.metaData.isConfigured = true;
+
+        // 3) guardar algo mínimo (luego aquí guardarás campaignId, etc.)
+        payload.arguments.execute = payload.arguments.execute || {};
+        payload.arguments.execute.inArguments = [
+        { uiConfigured: true }
+        ];
+
+        // 4) actualizar y cerrar
+        session.trigger("updateActivity", payload);
+        session.trigger("nextStep");
+    });
+
+    session.on("clickedCancel", () => {
+        session.trigger("ready");
     });
 
     session.trigger("ready");
